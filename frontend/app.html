@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autos Colombia - App</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/icons8-coches-68.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/icons8-coches-68.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/icons8-coches-68.png">
+    <link rel="icon" type="image/x-icon" href="favicon_io/icons8-coches-68.png">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="title">AUTOS<br>COLOMBIA</div>
+        <div class="label">GESTIONAR:</div>
+        <div class="menu-item" onclick="mostrarSeccion('dashboard')">DASHBOARD</div>
+        <div class="menu-item" onclick="mostrarSeccion('entrada')">ENTRADA VEHÍCULOS</div>
+        <div class="menu-item" onclick="mostrarSeccion('salida')">SALIDA VEHÍCULOS</div>
+        <div class="menu-item" onclick="mostrarSeccion('novedad')">NOVEDADES VEHÍCULOS</div>
+        <div class="menu-item" onclick="mostrarSeccion('historial')">HISTORIAL VEHÍCULO</div>
+        <div class="menu-item" id="menu-usuarios" onclick="mostrarSeccion('usuarios')">USUARIOS</div>
+        <div class="menu-item" id="menu-celdas" onclick="mostrarSeccion('celdas')">CELDAS</div>
+        
+        <div class="spacer"></div>
+        <div class="menu-item" onclick="salir()" style="margin-bottom: 2rem;">SALIR</div>
+    </div>
+
+    <div class="main-area">
+        
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="seccion">
+            <h2 class="titulo-seccion">VEHÍCULOS EN EL PARQUEADERO:</h2>
+
+            
+            <div class="subtitulo">VEHÍCULOS ACTUALES:</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>PLACA</th>
+                        <th>CELDA</th>
+                        <th>HORA DE ENTRADA</th>
+                        <th>NOVEDAD</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-dashboard">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ENTRADA -->
+        <div id="entrada" class="seccion">
+            <div class="form-container">
+                <h2 class="titulo-seccion">ENTRADA VEHÍCULOS</h2>
+                <label>PLACA</label>
+                <input type="text" id="placa-entrada" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                <button class="btn-primary" onclick="registrarEntrada()">REGISTRAR</button>
+                <div id="error-entrada" class="msg msg-error"></div>
+                <div id="ok-entrada" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+        <!-- SALIDA -->
+        <div id="salida" class="seccion">
+            <div class="form-container">
+                <h2 class="titulo-seccion">SALIDA VEHÍCULOS</h2>
+                <label>PLACA</label>
+                <input type="text" id="placa-salida" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                <button class="btn-primary" onclick="registrarSalida()">LIBERAR</button>
+                <div id="error-salida" class="msg msg-error"></div>
+                <div id="ok-salida" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+        <!-- NOVEDADES -->
+        <div id="novedad" class="seccion">
+            <div class="form-container">
+                <h2 class="titulo-seccion">NOVEDADES VEHÍCULOS</h2>
+                <label>PLACA</label>
+                <div class="input-group">
+                    <input type="text" id="placa-novedad" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                    <button class="btn-icon" onclick="buscarParaNovedad()">🔍</button>
+                </div>
+                
+                <label>DESCRIPCION</label>
+                <textarea id="desc-novedad" rows="4" disabled></textarea>
+                
+                <button class="btn-primary" id="btn-registrar-novedad" onclick="registrarNovedad()" disabled>REGISTRAR</button>
+                
+                <div id="error-novedad" class="msg msg-error"></div>
+                <div id="ok-novedad" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="historial" class="seccion">
+            <div class="form-container">
+                <h2 class="titulo-seccion">CONSULTAR HISTORIAL</h2>
+                <label>PLACA</label>
+                <div class="input-group">
+                    <input type="text" id="placa-historial" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                    <button class="btn-icon" onclick="buscarHistorial()">🔍</button>
+                </div>
+                
+                <div style="width: 100%; overflow-x: auto;">
+                    <table style="margin-top: 20px;">
+                        <thead>
+                            <tr>
+                                <th>F. ENTRADA</th>
+                                <th>F. SALIDA</th>
+                                <th>DURACIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-historial">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- USUARIOS -->
+        <div id="usuarios" class="seccion">
+            <h2 class="titulo-seccion">GESTIÓN DE USUARIOS</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('nuevo-operario', 'usuarios')">NUEVO OPERARIO</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('nuevo-cliente', 'usuarios')">NUEVO CLIENTE</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('consultar-usuarios', 'usuarios')">CONSULTAR USUARIOS</button>
+            </div>
+            
+            <div id="nuevo-operario" class="form-container sub-seccion-usuarios">
+                <h2 class="titulo-seccion">NUEVO OPERARIO</h2>
+                <label>NOMBRE</label>
+                <input type="text" id="op-nombre">
+                <label>DNI</label>
+                <input type="text" id="op-doc" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <label>TELÉFONO</label>
+                <input type="text" id="op-tel">
+                <label>CORREO</label>
+                <input type="text" id="op-correo">
+                <label>USUARIO</label>
+                <input type="text" id="op-usuario">
+                <label>CONTRASEÑA</label>
+                <input type="password" id="op-pass" style="flex: 1;background-color: #e0e0e0;border: none;border-radius: 25px;padding: 15px 20px;font-family: inherit;font-size: 1.2rem;outline: none;color: #2e3f5c;margin-bottom:20px;">
+                <button class="btn-primary" onclick="registrarOperario()">REGISTRAR</button>
+                <div id="error-nuevo-operario" class="msg msg-error"></div>
+                <div id="ok-nuevo-operario" class="msg msg-ok"></div>
+            </div>
+
+            <div id="nuevo-cliente" class="form-container sub-seccion-usuarios" style="display:none;">
+                <h2 class="titulo-seccion">NUEVO CLIENTE</h2>
+                <label>NOMBRE</label>
+                <input type="text" id="cli-nombre">
+                <label>DNI</label>
+                <input type="text" id="cli-doc" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <label>TELÉFONO</label>
+                <input type="text" id="cli-tel">
+                <label>CORREO</label>
+                <input type="text" id="cli-correo">
+                <label>PLACA</label>
+                <input type="text" id="cli-placa" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                <label>MARCA</label>
+                <input type="text" id="cli-marca">
+                <label>MODELO</label>
+                <input type="text" id="cli-modelo">
+                <button class="btn-primary" onclick="registrarCliente()">REGISTRAR</button>
+                <div id="error-nuevo-cliente" class="msg msg-error"></div>
+                <div id="ok-nuevo-cliente" class="msg msg-ok"></div>
+            </div>
+
+            <div id="consultar-usuarios" class="form-container sub-seccion-usuarios" style="display:none; max-width: 900px;">
+                <h2 class="titulo-seccion">CONSULTAR USUARIOS / CLIENTES</h2>
+                <label>NOMBRE O DNI</label>
+                <div class="input-group">
+                    <input type="text" id="busq-usuario">
+                    <button class="btn-icon" onclick="buscarUsuarios()">🔍</button>
+                </div>
+                <div style="width: 100%; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NOMBRE</th>
+                                <th>DNI</th>
+                                <th>TELÉFONO</th>
+                                <th>ROL</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-usuarios">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="msg-consulta-usuarios" style="text-align:center; color:gray; font-weight:bold; margin-top:20px;"></div>
+                
+
+                <div id="modal-eliminar-usuario" style="display:none; margin-top:20px; border-top: 1px solid #ddd; padding-top:20px; text-align:center;">
+                    <h3 style="color:#c07070;">¿ESTÁ SEGURO DE BORRAR AL USUARIO: <span id="borrar-user-nombre"></span>?</h3>
+                    <input type="hidden" id="borrar-user-doc">
+                    <div style="display:flex; justify-content:center; gap:20px;">
+                        <button class="btn-primary" style="background-color:gray; width:auto;" onclick="cancelarBorrarUsuario()">CANCELAR</button>
+                        <button class="btn-primary" style="background-color:#c07070; width:auto;" onclick="confirmarBorrarUsuario()">CONFIRMAR</button>
+                    </div>
+                </div>
+                
+                <div id="error-usuarios" class="msg msg-error"></div>
+                <div id="ok-usuarios" class="msg msg-ok"></div>
+            </div>
+
+            <div id="editar-usuario" class="form-container sub-seccion-usuarios" style="display:none;">
+                <h2 class="titulo-seccion">EDITAR USUARIO</h2>
+                <input type="hidden" id="edit-rol">
+                <label>DNI 🔒</label>
+                <input type="text" id="edit-doc" disabled style="background-color:#ccc;cursor:not-allowed;">
+                <label>NOMBRE</label>
+                <input type="text" id="edit-nombre">
+                <label>TELÉFONO</label>
+                <input type="text" id="edit-tel">
+                <label>CORREO</label>
+                <input type="text" id="edit-correo">
+                <div id="edit-op-fields" style="display:none; flex-direction:column;">
+                    <label>USUARIO</label>
+                    <input type="text" id="edit-usuario">
+                    <label>CONTRASEÑA (Dejar en blanco para no cambiar)</label>
+                    <input type="password" id="edit-pass" style="flex: 1;background-color: #e0e0e0;border: none;border-radius: 25px;padding: 15px 20px;font-family: inherit;font-size: 1.2rem;outline: none;color: #2e3f5c;margin-bottom:20px;">
+                </div>
+                
+                <div id="edit-cli-vehiculos" style="display:none; flex-direction:column; margin-top:20px; border-top:1px solid #ddd; padding-top:20px;">
+                    <h3 style="color:#2e3f5c; text-transform:uppercase; text-align:center;">VEHÍCULOS ASOCIADOS</h3>
+                    <div style="width: 100%; overflow-x: auto;">
+                        <table style="margin-top:0;">
+                            <thead><tr><th style="text-align:center;">PLACA</th><th style="text-align:center;">ACCIONES</th></tr></thead>
+                            <tbody id="tabla-vehiculos-cliente"></tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; flex-direction:row; align-items:stretch; gap:20px; width:100%; margin-top:16px;">
+                        <div style="display:flex; flex-direction:column; gap:16px; flex:1; min-width:0;">
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <label style="font-size:1rem; font-weight:bold; color:#2e3f5c; text-transform:uppercase; margin:0;">PLACA</label>
+                                <input type="text" id="nueva-placa-cliente" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" style="flex:none; width:100%; box-sizing:border-box; background-color:#e0e0e0; border:none; border-radius:25px; padding:12px 18px; font-family:inherit; font-size:1rem; font-weight:bold; outline:none; color:#2e3f5c;">
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <label style="font-size:1rem; font-weight:bold; color:#2e3f5c; text-transform:uppercase; margin:0;">MARCA</label>
+                                <input type="text" id="nueva-marca-cliente" style="flex:none; width:100%; box-sizing:border-box; background-color:#e0e0e0; border:none; border-radius:25px; padding:12px 18px; font-family:inherit; font-size:1rem; font-weight:bold; outline:none; color:#2e3f5c;">
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <label style="font-size:1rem; font-weight:bold; color:#2e3f5c; text-transform:uppercase; margin:0;">MODELO</label>
+                                <input type="text" id="nuevo-modelo-cliente" style="flex:none; width:100%; box-sizing:border-box; background-color:#e0e0e0; border:none; border-radius:25px; padding:12px 18px; font-family:inherit; font-size:1rem; font-weight:bold; outline:none; color:#2e3f5c;">
+                            </div>
+                        </div>
+                        <button onclick="agregarVehiculoCliente()" style="width:130px; flex-shrink:0; align-self:stretch; background-color:#4472a8; color:#ffffff; border:none; border-radius:15px; font-family:inherit; font-size:0.95rem; font-weight:bold; cursor:pointer; text-transform:uppercase; text-align:center; transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#5583b9'" onmouseout="this.style.backgroundColor='#4472a8'">AGREGAR<br>VEHÍCULO</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
+                    <button class="btn-primary" style="background-color:gray; width:auto;" onclick="cerrarEdicionUsuario()">CANCELAR</button>
+                    <button class="btn-primary" style="width:auto;" onclick="guardarEdicionUsuario()">GUARDAR CAMBIOS</button>
+                </div>
+                <div id="error-editar-usuario" class="msg msg-error"></div>
+                <div id="ok-editar-usuario" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+        <!-- CELDAS -->
+        <div id="celdas" class="seccion">
+            <h2 class="titulo-seccion">GESTIÓN DE CELDAS</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('registrar-celda', 'celdas')">REGISTRAR CELDA</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('dashboard-celdas', 'celdas')">ESTADO DE CELDAS</button>
+            </div>
+            
+            <div id="registrar-celda" class="form-container sub-seccion-celdas" style="padding: 3rem;">
+                <h2 class="titulo-seccion">REGISTRAR CELDA</h2>
+                <label>IDENTIFICADOR</label>
+                <input type="text" id="celda-id" maxlength="10" oninput="this.value=this.value.toUpperCase()">
+                <button class="btn-primary" onclick="registrarCelda()">GUARDAR</button>
+
+                <h2 class="titulo-seccion" style="margin-top: 30px;">GENERAR RANGO</h2>
+                <div class="rango-group" style="margin-bottom: 10px;">
+                    <div>
+                        <label>PREFIJO</label>
+                        <input type="text" id="celda-rango-prefijo" placeholder="ej: A" oninput="this.value=this.value.toUpperCase()">
+                    </div>
+                    <div>
+                        <label>DESDE</label>
+                        <input type="text" id="celda-rango-desde" placeholder="ej: 5" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    </div>
+                    <div>
+                        <label>HASTA</label>
+                        <input type="text" id="celda-rango-hasta" placeholder="ej: 100" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="generarRangoCeldas()">GENERAR RANGO</button>
+
+                <div id="error-registrar-celda" class="msg msg-error"></div>
+                <div id="ok-registrar-celda" class="msg msg-ok"></div>
+            </div>
+
+            <div id="dashboard-celdas" class="form-container sub-seccion-celdas" style="display:none; max-width: 900px;">
+                <h2 class="titulo-seccion">ESTADO DE CELDAS</h2>
+                <div class="cards-container">
+                    <div class="card">
+                        <div class="card-title">TOTAL CELDAS</div>
+                        <div class="card-value" id="celda-total">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">OCUPADAS</div>
+                        <div class="card-value" id="celda-ocupadas-val">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">DISPONIBLES</div>
+                        <div class="card-value" id="celda-disponibles-val">0</div>
+                    </div>
+                </div>
+                <div style="width: 100%; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CELDA</th>
+                                <th>ESTADO</th>
+                                <th>PLACA</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-celdas">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="msg-consulta-celdas" style="text-align:center; color:gray; font-weight:bold; margin-top:20px;"></div>
+                
+                <div id="modal-eliminar-celda" style="display:none; margin-top:20px; border-top: 1px solid #ddd; padding-top:20px; text-align:center;">
+                    <h3 style="color:#c07070;">¿ESTÁ SEGURO DE BORRAR LA CELDA: <span id="borrar-celda-id"></span>?</h3>
+                    <div style="display:flex; justify-content:center; gap:20px;">
+                        <button class="btn-primary" style="background-color:gray; width:auto;" onclick="cancelarBorrarCelda()">CANCELAR</button>
+                        <button class="btn-primary" style="background-color:#c07070; width:auto;" onclick="confirmarBorrarCelda()">CONFIRMAR</button>
+                    </div>
+                </div>
+                
+                <div id="error-celdas" class="msg msg-error"></div>
+                <div id="ok-celdas" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Javascript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
