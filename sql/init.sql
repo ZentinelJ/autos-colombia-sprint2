@@ -3,9 +3,9 @@ CREATE TABLE IF NOT EXISTS usuario (
     movil    VARCHAR(10)  NOT NULL,
     nombres  VARCHAR(50)  NOT NULL,
     correo   VARCHAR(50)  NOT NULL,
-    login    VARCHAR(12)  UNIQUE,
-    password VARCHAR(25),
-    rol      VARCHAR(20)  NOT NULL DEFAULT 'cliente'
+    login    VARCHAR(50)  UNIQUE,
+    password VARCHAR(255),
+    rol      VARCHAR(50)  NOT NULL DEFAULT 'cliente'
 );
 
 CREATE TABLE IF NOT EXISTS vehiculo (
@@ -42,4 +42,14 @@ CREATE TABLE IF NOT EXISTS novedad (
     CONSTRAINT fk_id_registro FOREIGN KEY (id_registro)
         REFERENCES registro (id_registro)
         ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pago (
+    id_pago      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    monto        NUMERIC        NOT NULL,
+    dni_cliente  VARCHAR(10)    NOT NULL,
+    fecha_pago   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    mes          VARCHAR(10)    NOT NULL,
+    CONSTRAINT fk_pago_usuario FOREIGN KEY (dni_cliente)
+        REFERENCES usuario (dni)
 );

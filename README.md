@@ -1,21 +1,19 @@
-# Autos Colombia - Sprint 2
+# Autos Colombia - Sprint 3
 
 Sistema de gestión de parqueadero por mensualidad **"Autos Colombia"**.  
-El Sprint 2 extiende el Sprint 1 agregando Gestión de Usuarios, Gestión de Celdas y asignación automática de celdas al registrar vehículos.
+El Sprint 3 extiende el Sprint 2 agregando el módulo de Gestión de Pagos.
 
 ---
 
 ## Descripción
 
-Sobre la base del Sprint 1 (entrada/salida de vehículos, novedades, historial), el Sprint 2 incorpora:
+Sobre la base de los Sprints 1 y 2 (entrada/salida de vehículos, novedades, historial, usuarios y celdas), el Sprint 3 incorpora:
 
-- Registro de operarios con credenciales de acceso al sistema.
-- Registro de clientes con vehículos asociados.
-- Edición y eliminación de usuarios con validaciones de integridad.
-- Gestión de celdas: registro individual, generación por rango, consulta de estado y eliminación.
-- Asignación automática de celda al registrar la entrada de un vehículo.
-- Liberación automática de celda al registrar la salida.
-- Control de acceso por roles desde el login.
+- Registro del pago mensual de un cliente buscando por documento o placa.
+- Cálculo automático de la fecha de vencimiento (30 días después del pago).
+- Consulta del estado de pago de un cliente (al día / vencido).
+- Historial de pagos de un cliente ordenado del más reciente al más antiguo.
+- Lista de clientes con pagos vencidos ordenada por días de mora de mayor a menor.
 
 ---
 
@@ -23,7 +21,7 @@ Sobre la base del Sprint 1 (entrada/salida de vehículos, novedades, historial),
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | HTML + CSS + JS vanilla (archivos separados por módulo) |
+| Frontend | HTML + CSS + JS vanilla (archivos externos por módulo) |
 | Backend | Python 3.11 + FastAPI + Uvicorn |
 | Base de datos | PostgreSQL 15 |
 | Conector BD | psycopg2 (SQL puro, sin ORM) |
@@ -41,13 +39,11 @@ autos_colombia/
 │   ├── novedad/
 │   ├── vehiculo/
 │   ├── usuario/
-│   │   ├── __init__.py
-│   │   ├── usuario_controller.py
-│   │   └── usuario_dto.py
-│   └── celda/
+│   ├── celda/
+│   └── pago/
 │       ├── __init__.py
-│       ├── celda_controller.py
-│       └── celda_dto.py
+│       ├── pago_controller.py
+│       └── pago_dto.py
 ├── frontend/
 │   ├── css/
 │   │   ├── login.css
@@ -65,62 +61,73 @@ autos_colombia/
 
 ---
 
-## Cambios respecto al Sprint 1
+## Cambios respecto al Sprint 2
 
 ### Base de datos
 
-La estructura de la BD cambió completamente. Las tablas deben recrearse desde cero antes de arrancar el Sprint 2.
+Se agrega una tabla nueva. No se modifica ninguna tabla existente.
 
-**Tablas nuevas:**
-- `usuario` — almacena operarios y clientes. Operarios tienen `login`, `password` (sha256) y `rol='operario'`. Clientes tienen `rol='cliente'` sin credenciales.
-- `celda` — almacena celdas físicas del parqueadero con `identificador` (ej: A1) y estado `disponible`.
+```sql
+CREATE TABLE IF NOT EXISTS pago (
+    id_pago     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    monto       NUMERIC        NOT NULL,
+    dni_cliente VARCHAR(10)    NOT NULL,
+    fecha_pago  TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    mes         VARCHAR(10)    NOT NULL,
+    CONSTRAINT fk_pago_usuario FOREIGN KEY (dni_cliente)
+        REFERENCES usuario (dni)
+);
+```
 
-**Tablas modificadas:**
-- `vehiculo` — ahora tiene `dni_cliente VARCHAR(10) NOT NULL` como FK obligatoria hacia `usuario`. Un vehículo siempre pertenece a un cliente registrado.
-- `registro` — ahora tiene `id_celda INTEGER` como FK hacia `celda`. Cada registro de entrada queda asociado a la celda asignada.
+> La fecha de vencimiento **no se almacena** en la BD. Se calcula en Python como `fecha_pago + 30 días` cada vez que se consulta. Esto es intencional.
 
 ### Backend
 
-**Nuevos módulos:**
-- `usuario_controller.py` — endpoints para crear operario, crear cliente, listar, buscar, editar y eliminar usuarios. Incluye `POST /usuario/login` para autenticación de operarios.
-- `celda_controller.py` — endpoints para crear celda individual, generar rango de celdas, consultar estado de todas las celdas y eliminar.
+**Módulo nuevo:**
+- `pago_controller.py` — 4 endpoints: registrar pago, consultar estado, consultar historial y listar vencidos.
+- `pago_dto.py` — DTOs para registrar pago y buscar por criterio.
 
-**Módulos modificados:**
-- `registro_controller.py` — la entrada ya no crea vehículos automáticamente. Si la placa no existe retorna error. Al crear el registro asigna automáticamente la celda disponible de menor índice y la marca como ocupada. Al registrar la salida libera la celda.
-- `vehiculo_controller.py` — agregado `GET /vehiculo/cliente/{dni}` para listar placas de un cliente y `DELETE /vehiculo/{placa}` para eliminar un vehículo sin registros activos.
-- `main.py` — registra los dos nuevos routers.
+**main.py:**
+- Agregado el router de pago con prefijo `/pago`.
+
+**Ningún módulo anterior fue modificado.**
 
 ### Frontend
 
-- `login.html` — ahora soporta autenticación dual: superadmin hardcodeado (`demoapp`/`midemo1234`) y operarios registrados en BD vía `POST /usuario/login`. Guarda el rol en `localStorage`.
-- `app.html` — dos secciones nuevas: USUARIOS y CELDAS. Control de acceso por rol: los operarios no ven USUARIOS ni CELDAS. El total de celdas ya no está hardcodeado, viene de la BD. CSS y JS extraídos a archivos externos.
+- `app.html` — agregada sección **PAGOS** al sidebar con cuatro subsecciones internas: Registrar Pago, Consultar Estado, Pagos Vencidos y Consultar Historial.
+- La sección PAGOS es visible tanto para `superadmin` como para `operario`.
 
 ---
 
-## Paso 1 — Recrear la base de datos
+## Paso 1 — Agregar tabla pago a la BD
 
-**Importante:** la estructura de la BD cambió desde el Sprint 1. Es obligatorio borrar las tablas anteriores y recrearlas.
-
-En pgAdmin, seleccionar `Autos_Colombia` → **Query Tool** y ejecutar:
+No es necesario recrear la BD completa. Solo ejecutar en pgAdmin con `Autos_Colombia` seleccionada:
 
 ```sql
-DROP TABLE IF EXISTS novedad CASCADE;
-DROP TABLE IF EXISTS registro CASCADE;
-DROP TABLE IF EXISTS celda CASCADE;
-DROP TABLE IF EXISTS vehiculo CASCADE;
-DROP TABLE IF EXISTS usuario CASCADE;
+CREATE TABLE IF NOT EXISTS pago (
+    id_pago     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    monto       NUMERIC        NOT NULL,
+    dni_cliente VARCHAR(10)    NOT NULL,
+    fecha_pago  TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    mes         VARCHAR(10)    NOT NULL,
+    CONSTRAINT fk_pago_usuario FOREIGN KEY (dni_cliente)
+        REFERENCES usuario (dni)
+);
 ```
 
-Luego ejecutar el contenido de `sql/init.sql` (sin el bloque `CREATE DATABASE`).
+Si además los campos `login` o `password` de la tabla `usuario` tienen longitudes insuficientes, corregir con:
 
-Si la BD no existe, crearla primero:
-1. Clic derecho en **Databases** → **Create** → **Database**
-2. Name: `Autos_Colombia` → Guardar
-3. Seleccionar `Autos_Colombia` → **Query Tool** → ejecutar `sql/init.sql`
+```sql
+ALTER TABLE usuario ALTER COLUMN login TYPE VARCHAR(50);
+ALTER TABLE usuario ALTER COLUMN password TYPE VARCHAR(255);
+ALTER TABLE usuario ALTER COLUMN rol TYPE VARCHAR(50);
+```
 
 ---
 
 ## Paso 2 — Instalar dependencias Python
+
+Sin cambios respecto al Sprint 2:
 
 ```bash
 pip install fastapi uvicorn psycopg2-binary pydantic
@@ -133,36 +140,21 @@ pip install fastapi uvicorn psycopg2-binary pydantic
 ```bash
 cd backend
 PYTHONPATH=. python3 -m uvicorn main:app --reload
-# El servidor queda en http://localhost:8000
 ```
 
 ---
 
 ## Paso 4 — Servir el frontend
 
-A diferencia del Sprint 1, el frontend debe servirse con un servidor HTTP para que `localStorage` funcione correctamente. **No abrir los HTML directamente como archivos locales.**
-
 ```bash
 cd frontend
 python3 -m http.server 3000
 ```
 
-Luego abrir en el navegador:
+Abrir en el navegador:
 ```
 http://localhost:3000/login.html
 ```
-
----
-
-## Paso 5 — Flujo inicial obligatorio
-
-El sistema requiere tener celdas y clientes registrados antes de poder operar. Seguir este orden:
-
-1. Entrar con superadmin: `demoapp` / `midemo1234`.
-2. Ir a **CELDAS** → **Registrar Celda** → usar **Generar Rango** para crear las celdas (ej: prefijo `A`, desde `1`, hasta `50`).
-3. Ir a **USUARIOS** → **Nuevo Cliente** → registrar clientes con sus placas.
-4. Ir a **USUARIOS** → **Nuevo Operario** → registrar operarios si se necesitan.
-5. Ya se puede operar: **Entrada Vehículos** → ingresar placa → el sistema asigna celda automáticamente.
 
 ---
 
@@ -184,57 +176,23 @@ http://localhost:8000/docs
 
 ---
 
-## Lógica de asignación de celdas
+## Lógica de pagos
 
-- Al registrar la entrada de un vehículo, el sistema busca automáticamente la celda disponible con menor índice numérico y la asigna al registro.
-- Si no hay celdas disponibles, la entrada es rechazada con mensaje de error.
-- Al registrar la salida, la celda asignada queda disponible nuevamente y puede ser reasignada al próximo vehículo que entre.
-- No se puede registrar la entrada de un vehículo cuya placa no esté registrada en el sistema. El vehículo debe existir previamente asociado a un cliente.
+**Registrar pago:**
+- Se busca el cliente por DNI o por placa del vehículo.
+- El backend registra `fecha_pago = NOW()` y `mes` automáticamente.
+- La fecha de vencimiento se retorna en la respuesta como `fecha_pago + 30 días` pero no se guarda en la BD.
 
----
+**Estado de pago:**
+- Se determina comparando `fecha_pago + 30 días` del último pago con la fecha actual.
+- Si `NOW() <= fecha_pago + 30 días` → **AL DÍA**.
+- Si `NOW() > fecha_pago + 30 días` → **VENCIDO**.
+- Si el cliente no tiene pagos → **SIN REGISTROS**.
 
-## Roles y acceso
-
-| Rol | Secciones disponibles |
-|---|---|
-| Superadmin (`demoapp`) | Todo — Dashboard, Entrada, Salida, Novedades, Historial, Usuarios, Celdas |
-| Operario | Dashboard, Entrada, Salida, Novedades, Historial |
-
----
-
-## Problemas comunes
-
-**El login no redirige a app.html**  
-Asegurarse de acceder vía `http://localhost:3000/login.html` y no como archivo local (`file:///`). El `localStorage` requiere un servidor HTTP.
-
-**Error: la placa no está registrada al intentar entrada**  
-En el Sprint 2 los vehículos deben existir previamente en la BD asociados a un cliente. Registrar primero el cliente con su placa desde USUARIOS → Nuevo Cliente.
-
-**Error: no hay celdas disponibles**  
-Crear celdas desde CELDAS → Registrar Celda antes de intentar registrar entradas.
-
-**uvicorn: orden no encontrada**  
-Usar `python3 -m uvicorn main:app --reload` en lugar de `uvicorn` directo.
-
-**Error de autenticación PostgreSQL**  
-```bash
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
-```
-
-**ModuleNotFoundError al arrancar**  
-Ejecutar uvicorn desde la carpeta `backend/` con `PYTHONPATH=.`:
-```bash
-cd backend
-PYTHONPATH=. python3 -m uvicorn main:app --reload
-```
-
-**Posesión dudosa detectada (Git)**  
-```bash
-git config --global --add safe.directory /ruta/al/proyecto
-```
+**Pagos vencidos:**
+- Lista todos los clientes cuyo pago más reciente tenga `fecha_pago + 30 días < NOW()`.
+- Incluye días de mora calculados como `NOW() - (fecha_pago + 30 días)`.
+- Ordenada de mayor a menor mora.
+- Carga automáticamente al abrir la subsección, sin necesidad de buscar.
 
 ---
-
-## Ejecutar en Windows
-
-Ver sección correspondiente en el README del Sprint 1. Aplican las mismas consideraciones de UTF-8 y rutas sin caracteres especiales.

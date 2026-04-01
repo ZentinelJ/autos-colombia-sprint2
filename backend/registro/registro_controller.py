@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from datetime import datetime, timedelta
 from .registro_dto import RegistroCreateDTO, RegistroSalidaDTO
 from db import get_connection
 
@@ -27,7 +28,22 @@ def registrar_entrada(dto: RegistroCreateDTO):
         cursor.execute("SELECT 1 FROM vehiculo WHERE placa = %s", (dto.placa_vehiculo,))
         if not cursor.fetchone():
             raise HTTPException(status_code=400, detail="La placa no está registrada. Registre primero el cliente desde la sección Usuarios.")
-        
+
+        # Verificar que el cliente tenga un pago vigente (no vencido) en los últimos 30 días
+        cursor.execute("""
+            SELECT fecha_pago FROM pago
+            WHERE dni_cliente = (SELECT dni_cliente FROM vehiculo WHERE placa = %s)
+            ORDER BY fecha_pago DESC
+            LIMIT 1
+        """, (dto.placa_vehiculo,))
+        pago_row = cursor.fetchone()
+        if not pago_row:
+            raise HTTPException(status_code=403, detail="El cliente no tiene pagos registrados. Debe realizar un pago antes de ingresar.")
+        ultimo_pago = pago_row[0]
+        now = datetime.now(ultimo_pago.tzinfo) if ultimo_pago.tzinfo else datetime.now()
+        if now > ultimo_pago + timedelta(days=30):
+            raise HTTPException(status_code=403, detail="El pago del cliente está vencido. Debe renovar su pago antes de ingresar.")
+
         # Buscar celda disponible ordenando por identificador (PK), de menor a mayor
         cursor.execute("""
             SELECT identificador FROM celda

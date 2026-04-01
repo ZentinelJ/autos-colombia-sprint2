@@ -22,6 +22,7 @@
         <div class="menu-item" onclick="mostrarSeccion('historial')">HISTORIAL VEHÍCULO</div>
         <div class="menu-item" id="menu-usuarios" onclick="mostrarSeccion('usuarios')">USUARIOS</div>
         <div class="menu-item" id="menu-celdas" onclick="mostrarSeccion('celdas')">CELDAS</div>
+        <div class="menu-item" id="menu-pagos" onclick="mostrarSeccion('pagos')">PAGOS</div>
         
         <div class="spacer"></div>
         <div class="menu-item" onclick="salir()" style="margin-bottom: 2rem;">SALIR</div>
@@ -337,6 +338,95 @@
                 
                 <div id="error-celdas" class="msg msg-error"></div>
                 <div id="ok-celdas" class="msg msg-ok"></div>
+            </div>
+        </div>
+
+        <!-- PAGOS -->
+        <div id="pagos" class="seccion" style="display:none;">
+            <h2 class="titulo-seccion">GESTIÓN DE PAGOS</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('registrar-pago', 'pagos')">REGISTRAR PAGO</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('consultar-estado-pago', 'pagos')">CONSULTAR ESTADO</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('pagos-vencidos', 'pagos')">PAGOS VENCIDOS</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="mostrarSubSeccion('consultar-historial-pago', 'pagos')">CONSULTAR HISTORIAL</button>
+            </div>
+            
+            <!-- 6.1 Subsección REGISTRAR PAGO -->
+            <div id="registrar-pago" class="form-container sub-seccion-pagos">
+                <h2 class="titulo-seccion">REGISTRAR PAGO</h2>
+                <label>DNI O PLACA</label>
+                <div class="input-group">
+                    <input type="text" id="busq-pago-reg">
+                    <button class="btn-icon" onclick="buscarParaPagoReg()">🔍</button>
+                </div>
+                
+                <div id="info-cliente-pago" style="display:none; width: 100%; overflow-x: auto; margin-top:20px;">
+                    <table style="margin-bottom:20px;">
+                        <thead><tr><th>NOMBRE</th><th>DNI</th></tr></thead>
+                        <tbody><tr><td id="pago-reg-nombre-val"></td><td id="pago-reg-dni-val"></td></tr></tbody>
+                    </table>
+                    <label>VALOR DEL PAGO</label>
+                    <input type="number" id="pago-reg-valor" step="0.01">
+                    <button class="btn-primary" onclick="ejecutarRegistrarPago()">REGISTRAR</button>
+                </div>
+
+                <div id="error-registrar-pago" class="msg msg-error"></div>
+                <div id="ok-registrar-pago" class="msg msg-ok"></div>
+            </div>
+
+            <!-- 6.2 Subsección CONSULTAR ESTADO -->
+            <div id="consultar-estado-pago" class="form-container sub-seccion-pagos" style="display:none; max-width: 900px;">
+                <h2 class="titulo-seccion">CONSULTAR ESTADO</h2>
+                <label>DNI O PLACA</label>
+                <div class="input-group">
+                    <input type="text" id="busq-pago-estado">
+                    <button class="btn-icon" onclick="buscarEstadoPago()">🔍</button>
+                </div>
+                
+                <div id="resultado-estado-pago" style="display:none; width: 100%; overflow-x: auto; margin-top:20px;">
+                    <table>
+                        <thead><tr><th>NOMBRE</th><th>ULTIMO PAGO</th><th>VENCIMIENTO</th><th>ESTADO</th></tr></thead>
+                        <tbody id="tabla-estado-pago"></tbody>
+                    </table>
+                </div>
+
+                <div id="error-consultar-estado-pago" class="msg msg-error"></div>
+                <div id="ok-consultar-estado-pago" class="msg msg-ok"></div>
+            </div>
+
+            <!-- 6.3 Subsección PAGOS VENCIDOS -->
+            <div id="pagos-vencidos" class="form-container sub-seccion-pagos" style="display:none; max-width: 900px;">
+                <h2 class="titulo-seccion">PAGOS VENCIDOS</h2>
+                <div style="width: 100%; overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>NOMBRE</th><th>DNI</th><th>PLACA</th><th>MORA</th></tr></thead>
+                        <tbody id="tabla-pagos-vencidos"></tbody>
+                    </table>
+                </div>
+                <div id="msg-vencidos-pago" style="text-align:center; color:gray; font-weight:bold; margin-top:20px;"></div>
+                <div id="error-pagos-vencidos" class="msg msg-error"></div>
+            </div>
+
+            <!-- 6.4 Subsección CONSULTAR HISTORIAL -->
+            <div id="consultar-historial-pago" class="form-container sub-seccion-pagos" style="display:none; max-width: 900px;">
+                <h2 class="titulo-seccion">CONSULTAR HISTORIAL</h2>
+                <label>DNI O PLACA</label>
+                <div class="input-group">
+                    <input type="text" id="busq-pago-historial">
+                    <button class="btn-icon" onclick="buscarHistorialPago()">🔍</button>
+                </div>
+                
+                <h3 id="titulo-resultados-historial-pago" style="display:none; color:#2e3f5c; text-align:center; margin-top:20px;"></h3>
+                <div id="resultado-historial-pago" style="display:none; width: 100%; overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>FECHA DE PAGO</th><th>VALOR</th><th>VENCIMIENTO</th></tr></thead>
+                        <tbody id="tabla-historial-pago"></tbody>
+                    </table>
+                </div>
+                <div id="msg-historial-pago" style="text-align:center; color:gray; font-weight:bold; margin-top:20px;"></div>
+
+                <div id="error-consultar-historial-pago" class="msg msg-error"></div>
+                <div id="ok-consultar-historial-pago" class="msg msg-ok"></div>
             </div>
         </div>
 

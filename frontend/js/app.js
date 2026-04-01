@@ -51,6 +51,8 @@
                 mostrarSubSeccion('nuevo-operario', 'usuarios');
             } else if (id === 'celdas') {
                 mostrarSubSeccion('registrar-celda', 'celdas');
+            } else if (id === 'pagos') {
+                mostrarSubSeccion('registrar-pago', 'pagos');
             }
         }
 
@@ -67,6 +69,8 @@
                 buscarUsuarios();
             } else if (id === 'dashboard-celdas') {
                 cargarDashboardCeldas();
+            } else if (id === 'pagos-vencidos') {
+                cargarPagosVencidos();
             }
         }
 
@@ -605,4 +609,185 @@
                 cargarDashboardCeldas();
                 cargarDashboard();
             }
+        }
+
+        // --- PAGOS ---
+        async function buscarParaPagoReg() {
+            const criterio = document.getElementById('busq-pago-reg').value.trim();
+            ocultarMensajes('registrar-pago');
+            const tableInfo = document.getElementById('info-cliente-pago');
+            tableInfo.style.display = 'none';
+
+            if (!criterio) {
+                mostrarError('registrar-pago', 'Ingrese un criterio de búsqueda.');
+                return;
+            }
+
+            const { ok, data } = await apiCall('GET', '/pago/estado/' + encodeURIComponent(criterio));
+            if (!ok) {
+                mostrarError('registrar-pago', 'CLIENTE NO ENCONTRADO');
+                return;
+            }
+
+            const cliente = data.cliente || data;
+            
+            document.getElementById('pago-reg-nombre-val').textContent = cliente.nombres || cliente.nombre;
+            document.getElementById('pago-reg-dni-val').textContent = cliente.dni;
+            document.getElementById('pago-reg-valor').value = '';
+            tableInfo.style.display = 'block';
+        }
+
+        async function ejecutarRegistrarPago() {
+            ocultarMensajes('registrar-pago');
+            const criterio = document.getElementById('pago-reg-dni-val').textContent;
+            const valor = parseFloat(document.getElementById('pago-reg-valor').value);
+
+            if (!criterio || isNaN(valor) || valor <= 0) {
+                mostrarError('registrar-pago', 'Ingrese un valor de pago válido.');
+                return;
+            }
+
+            const { ok, data } = await apiCall('POST', '/pago', { criterio, monto: valor });
+            if (!ok) {
+                mostrarError('registrar-pago', data.detail || 'Error al registrar pago.');
+            } else {
+                const fPago = new Date(data.fecha_pago).toLocaleString('es-CO');
+                const fVenc = new Date(data.fecha_vencimiento).toLocaleString('es-CO', {dateStyle: 'short'});
+                mostrarOk('registrar-pago', `Pago exitoso. Fecha: ${fPago} - Vencimiento: ${fVenc}`);
+                document.getElementById('info-cliente-pago').style.display = 'none';
+                limpiarInput('busq-pago-reg');
+            }
+        }
+
+        async function buscarEstadoPago() {
+            const criterio = document.getElementById('busq-pago-estado').value.trim();
+            ocultarMensajes('consultar-estado-pago');
+            const resultDiv = document.getElementById('resultado-estado-pago');
+            const tbody = document.getElementById('tabla-estado-pago');
+            resultDiv.style.display = 'none';
+            tbody.innerHTML = '';
+
+            if (!criterio) {
+                mostrarError('consultar-estado-pago', 'Ingrese un nombre, DNI o placa.');
+                return;
+            }
+
+            const { ok, data } = await apiCall('GET', '/pago/estado/' + encodeURIComponent(criterio));
+            if (!ok) {
+                // Client not found
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="4" style="text-align:center; font-weight:bold; color:#c07070;">USUARIO NO ENCONTRADO</td>`;
+                tbody.appendChild(tr);
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            if (data.estado === 'sin_pagos') {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="4" style="text-align:center; font-weight:bold; color:gray;">USUARIO SIN REGISTROS</td>`;
+                tbody.appendChild(tr);
+            } else {
+                const color = data.estado === 'al_dia' ? '#a8d5a2' : '#c07070';
+                const txtEstado = data.estado === 'al_dia' ? 'AL DÍA' : 'VENCIDO';
+                
+                const fPago = new Date(data.ultimo_pago).toLocaleString('es-CO', {dateStyle: 'short'});
+                const fVenc = new Date(data.vencimiento).toLocaleString('es-CO', {dateStyle: 'short'});
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.nombre}</td>
+                    <td>${fPago}</td>
+                    <td>${fVenc}</td>
+                    <td style="background-color: ${color}; font-weight: bold; text-align: center; color: #2e3f5c;">${txtEstado}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        async function cargarPagosVencidos() {
+            ocultarMensajes('pagos-vencidos');
+            document.getElementById('msg-vencidos-pago').textContent = '';
+            const tbody = document.getElementById('tabla-pagos-vencidos');
+            tbody.innerHTML = '';
+
+            const { ok, data } = await apiCall('GET', '/pago/vencidos');
+            if (!ok) {
+                mostrarError('pagos-vencidos', 'Error al consultar pagos vencidos.');
+                return;
+            }
+
+            if (data.length === 0) {
+                document.getElementById('msg-vencidos-pago').textContent = 'TODOS LOS CLIENTES ESTÁN AL DÍA';
+                return;
+            }
+
+            data.forEach(v => {
+                const tr = document.createElement('tr');
+                const dias = v.mora_dias ?? 0;
+                tr.innerHTML = `
+                    <td>${v.nombre}</td>
+                    <td>${v.dni}</td>
+                    <td>${v.placa || '-'}</td>
+                    <td style="color:#c07070; font-weight:bold;">${dias} DÍAS</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function buscarHistorialPago() {
+            const criterio = document.getElementById('busq-pago-historial').value.trim();
+            ocultarMensajes('consultar-historial-pago');
+            const resultDiv = document.getElementById('resultado-historial-pago');
+            const titulo = document.getElementById('titulo-resultados-historial-pago');
+            const tbody = document.getElementById('tabla-historial-pago');
+            document.getElementById('msg-historial-pago').textContent = '';
+            
+            resultDiv.style.display = 'none';
+            titulo.style.display = 'none';
+            tbody.innerHTML = '';
+
+            if (!criterio) {
+                mostrarError('consultar-historial-pago', 'Ingrese un nombre, DNI o placa.');
+                return;
+            }
+
+            // Traer estado para obtener nombre del cliente
+            const st = await apiCall('GET', '/pago/estado/' + encodeURIComponent(criterio));
+            if (!st.ok) {
+                // Cliente no encontrado
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="3" style="text-align:center; font-weight:bold; color:#c07070;">CLIENTE NO IDENTIFICADO</td>`;
+                tbody.appendChild(tr);
+                resultDiv.style.display = 'block';
+                return;
+            }
+            const nombreCliente = st.data.nombre || (st.data.cliente ? st.data.cliente.nombres : 'Desconocido');
+
+            const { ok, data } = await apiCall('GET', '/pago/historial/' + encodeURIComponent(criterio));
+            if (!ok) {
+                mostrarError('consultar-historial-pago', 'CLIENTE NO IDENTIFICADO');
+                return;
+            }
+
+            if (data.length === 0) {
+                document.getElementById('msg-historial-pago').textContent = 'EL CLIENTE NO TIENE HISTORIAL';
+                return;
+            }
+
+            titulo.textContent = `RESULTADOS PARA: ${nombreCliente.toUpperCase()}`;
+            titulo.style.display = 'block';
+            resultDiv.style.display = 'block';
+
+            data.forEach(h => {
+                const fPago = new Date(h.fecha_pago).toLocaleString('es-CO');
+                const fVenc = new Date(h.vencimiento).toLocaleString('es-CO', {dateStyle: 'short'});
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${fPago}</td>
+                    <td>$ ${h.monto.toLocaleString('es-CO', {minimumFractionDigits: 2})}</td>
+                    <td>${fVenc}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
